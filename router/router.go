@@ -7,7 +7,8 @@ import (
 
 func Router() *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc("/api/shorturl", controller.GenerateShortURL).Methods("GET")
+	router.HandleFunc("/api/shorturl", controller.GenerateShortURL).Methods("POST")
+	router.HandleFunc("/redirect/{shorturl}", controller.RedirectURLHandler).Methods("GET")
 
 	return router
 }
