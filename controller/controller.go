@@ -2,12 +2,16 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/md5"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"time"
 
+	"github.com/Amangupta20000/urlShortner/model"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/yaml.v2"
@@ -71,7 +75,55 @@ func init() {
 	fmt.Println("Collection instance/reference is ready")
 }
 
-func ShortenURL(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/x-www-form-urlencode")
-	json.NewEncoder(w).Encode("All Okay")
+// helper functions
+func generateShortURL(original_url string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(original_url))
+	data := hasher.Sum(nil)
+
+	hash := hex.EncodeToString(data)
+	fmt.Println("hasher : ", hash[:8])
+	return hash[:8]
+}
+
+func createURL(original_url string) (model.URL, error) {
+	shortURL := generateShortURL(original_url)
+	id := shortURL // use short url for id for simplicity
+
+	response := model.URL{
+		ID:           id,
+		OriginalURL:  original_url,
+		ShortURL:     shortURL,
+		CreationDate: time.Now(),
+	}
+
+	inserted, err := collection.InsertOne(context.Background(), response)
+	if err != nil {
+		return model.URL{}, fmt.Errorf("failed to insert URL: %v", err)
+	}
+
+	fmt.Println("Inserted 1 URL with id: ", inserted.InsertedID)
+
+	// Return the inserted object
+	return response, nil
+}
+
+func getURL(id string) (model.URL, error) {
+	// Define the filter to search by the custom 'id' field (which is a string)
+	filter := bson.M{"id": id}
+
+	var urlObj model.URL
+
+	// Find the URL in the collection
+	err := collection.FindOne(context.Background(), filter).Decode(&urlObj)
+	if err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			// No document was found, handle it accordingly
+			return model.URL{}, errors.New("URL not Found")
+		}
+		// Other errors
+		return model.URL{}, fmt.Errorf("failed to fetch URL: %v", err)
+	}
+
+	return urlObj, nil
 }
