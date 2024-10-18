@@ -12,6 +12,7 @@ import (
 
 // ShortenURL is a handler that responds with a basic JSON message
 func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
 	w.Header().Set("Allow-Control-Allow-Methods", "POST")
 
