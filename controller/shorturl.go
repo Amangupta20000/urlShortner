@@ -12,9 +12,20 @@ import (
 
 // ShortenURL is a handler that responds with a basic JSON message
 func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
+	// Handle preflight (OPTIONS) request
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Add CORS headers for actual requests
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
-	w.Header().Set("Allow-Control-Allow-Methods", "POST")
+	w.Header().Set("Content-Type", "application/json") // Adjusted to application/json
+	// w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+	// w.Header().Set("Allow-Control-Allow-Methods", "POST")
 
 	var data struct {
 		URL string `json:"url"`
@@ -23,9 +34,9 @@ func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
 	}
 
-	// originalURL := r.URL.Query().Get("url")
 	if data.URL == "" {
 		http.Error(w, "Missing 'url' query parameter", http.StatusBadRequest)
 		return
