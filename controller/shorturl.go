@@ -10,6 +10,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// CORSMiddleware adds the necessary CORS headers to the response
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Add the required CORS headers for every request
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// If it's a preflight (OPTIONS) request, respond with 204 No Content
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Otherwise, call the next handler
+		next.ServeHTTP(w, r)
+	})
+}
+
 // ShortenURL is a handler that responds with a basic JSON message
 func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
 	// Handle preflight (OPTIONS) request
@@ -21,11 +40,9 @@ func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Add CORS headers for actual requests
+	// Set CORS headers for actual requests
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json") // Adjusted to application/json
-	// w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
-	// w.Header().Set("Allow-Control-Allow-Methods", "POST")
+	w.Header().Set("Content-Type", "application/json")
 
 	var data struct {
 		URL string `json:"url"`
@@ -41,6 +58,8 @@ func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing 'url' query parameter", http.StatusBadRequest)
 		return
 	}
+
+	// Call createURL to generate shortened URL
 	urlObject, err := createURL(data.URL)
 	if err != nil {
 		http.Error(w, "Failed to create shortened URL", http.StatusInternalServerError)
@@ -48,7 +67,7 @@ func GenerateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encode the entire inserted object as JSON in the response
+	// Return the created shortened URL object as JSON
 	err = json.NewEncoder(w).Encode(urlObject)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
